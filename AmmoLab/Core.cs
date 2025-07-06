@@ -6,7 +6,7 @@ using MelonLoader;
 using System.Reflection;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(AmmoLab.Core), "AmmoLab", "6.6.6", "freakycheesy", "https://discord.gg/vMxGr3N2ng")]
+[assembly: MelonInfo(typeof(AmmoLab.Core), "AmmoLab", "6.6.6", "freakycheesy", "https://github.com/freakycheesy/AmmoLab/")]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
 namespace AmmoLab
 {
