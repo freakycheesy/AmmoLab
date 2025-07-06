@@ -18,16 +18,16 @@ namespace AmmoLab
                 return c;
             }
         }
-        public static DefaultMod mod;
+        public static DefaultMod mod = new();
         public static MelonPreferences_Category PrefsCategory;
 
         public override void OnInitializeMelon()
         {
             LoggerInstance.Msg("Initialized.");
             HarmonyInstance.PatchAll();
+
             PrefsCategory = MelonPreferences.CreateCategory("AmmoLab");
 
-            mod = new();
             mod.OnInitializeMelon();
         }    
         public override void OnSceneWasLoaded(int buildIndex, string sceneName) {
@@ -151,16 +151,16 @@ namespace AmmoLab
             public static Action<Magazine> onInsert;
             public static Action<Magazine> onEject;
 
-            [HarmonyPatch(nameof(Magazine.OnPoolInitialize))]
+            [HarmonyPatch(nameof(Magazine.Awake))]
             [HarmonyPostfix]
-            public static void OnPoolInitialize(Magazine __instance) {
+            public static void Awake(Magazine __instance) {
                 magazines.Add(__instance.TryCast<Magazine>());
                 onSpawn.Invoke(__instance);
             }
 
-            [HarmonyPatch(nameof(Magazine.OnPoolDeInitialize))]
+            [HarmonyPatch(nameof(Magazine.Destroy))]
             [HarmonyPostfix]
-            public static void OnPoolDeInitialize(Magazine __instance) {
+            public static void Destroy(Magazine __instance) {
                 magazines.Remove(__instance.TryCast<Magazine>());
                 onDespawn.Invoke(__instance);
             }
@@ -205,6 +205,7 @@ namespace AmmoLab
             public static void Awake(AmmoInventory __instance) {
                 OnAwake.Invoke(__instance);
             }
+
             [HarmonyPatch(nameof(AmmoInventory.Destroy))]
             [HarmonyPostfix]
             public static void Destroy(AmmoInventory __instance) {
