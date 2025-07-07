@@ -1,7 +1,9 @@
-﻿using AmmoLab.Patches;
+﻿using AmmoLab.Utils;
 using BoneLib.BoneMenu;
 using HarmonyLib;
 using Il2CppSLZ.Marrow;
+using Il2CppSLZ.Marrow.Data;
+using Il2CppSLZ.Marrow.Pool;
 using MelonLoader;
 using System.Reflection;
 using UnityEngine;
@@ -22,14 +24,12 @@ namespace AmmoLab
         public static MelonPreferences_Category PrefsCategory;
 
         public override void OnInitializeMelon()
-        {
+        { 
             LoggerInstance.Msg("Initialized.");
-            HarmonyInstance.PatchAll();
+            
+            HarmonyInstance.PatchAll(typeof(Utils.Patches));
+        }
 
-            PrefsCategory = MelonPreferences.CreateCategory("AmmoLab");
-
-            mod.OnInitializeMelon();
-        }    
         public override void OnSceneWasLoaded(int buildIndex, string sceneName) {
             base.OnSceneWasLoaded(buildIndex, sceneName);
             MagazineUtils.magazines.Clear();
@@ -54,32 +54,28 @@ namespace AmmoLab
         // Colors
         private static MelonPreferences_Entry<Color> gold;
 
-        public void OnInitializeMelon() {
-            MelonLogger.Msg("Init Ammo Lab BoneMenu");
+        public void AmmoInventoryUpdate() {
+                if (AutoMagazineRefill.Value)
+                    MagazineUtils.RefillAllMagazines();
+                if (EnableStaticAmmo.Value)
+                    AmmoInventoryUtils.AddAmmoToInventory(StaticAmmo.Value);
+        }
 
+        public DefaultMod() {
+            MelonLogger.Msg("Initialized Ammo Lab BoneMenu");
+
+            Core.PrefsCategory = MelonPreferences.CreateCategory("AmmoLab");
             Menu.Initialize();
             InitSettings();
             CreateBonemenu();
 
-            AmmoInventoryUtils.OnAddCartridge += (a, b, c) => {
-                AmmoInventoryUpdate();
-            };
-            AmmoInventoryUtils.OnRemoveCartridge += (a, b, c) => {
-                AmmoInventoryUpdate();
-            };
-            MagazineUtils.onEject += RefillMagazine;
-            MagazineUtils.onSpawn += MakeMagsGold;
+            AmmoInventoryUtils.OnAmmoUpdate += AmmoInventoryUpdate;
+            MagazineUtils.OnEject += RefillMagazine;
+            MagazineUtils.OnSpawn += MakeMagsGold;
         }
 
-        private static void AmmoInventoryUpdate() {
-            if (AutoMagazineRefill.Value)
-                MagazineUtils.RefillAllMagazines();
-            if (EnableStaticAmmo.Value)
-                AmmoInventoryUtils.AddAmmoToInventory(StaticAmmo.Value);
-        }
 
         private static void InitSettings() {
-
             ActivateMod = Core.PrefsCategory.CreateEntry<bool>(nameof(ActivateMod), true);
 
             EmptyRefill = Core.PrefsCategory.CreateEntry<bool>(nameof(EmptyRefill), false);
@@ -142,40 +138,14 @@ namespace AmmoLab
         }
     }
 
-    namespace Patches {
-        [HarmonyPatch(typeof(Magazine))]
-        public class MagazineUtils {
+    namespace Utils {
+
+        public static class MagazineUtils {
             public static List<Magazine> magazines = new();
-            public static Action<Magazine> onSpawn;
-            public static Action<Magazine> onDespawn;
-            public static Action<Magazine> onInsert;
-            public static Action<Magazine> onEject;
-
-            [HarmonyPatch(nameof(Magazine.Awake))]
-            [HarmonyPostfix]
-            public static void Awake(Magazine __instance) {
-                magazines.Add(__instance.TryCast<Magazine>());
-                onSpawn.Invoke(__instance);
-            }
-
-            [HarmonyPatch(nameof(Magazine.Destroy))]
-            [HarmonyPostfix]
-            public static void Destroy(Magazine __instance) {
-                magazines.Remove(__instance.TryCast<Magazine>());
-                onDespawn.Invoke(__instance);
-            }
-
-            [HarmonyPatch(nameof(Magazine.OnInsert))]
-            [HarmonyPostfix]
-            public static void OnInsert(Magazine __instance) {
-                onInsert.Invoke(__instance);
-            }
-
-            [HarmonyPatch(nameof(Magazine.OnEject))]
-            [HarmonyPostfix]
-            public static void OnEject(Magazine __instance) {
-                onEject.Invoke(__instance);
-            }
+            public static Action<Magazine> OnSpawn;
+            public static Action<Magazine> OnDespawn;
+            public static Action<Magazine> OnInsert;
+            public static Action<Magazine> OnEject;
 
             public static void RefillAllMagazines() {
                 foreach (var mag in magazines) {
@@ -188,39 +158,10 @@ namespace AmmoLab
             }
         }
 
-        [HarmonyPatch(typeof(AmmoInventory))]
-        public class AmmoInventoryUtils {
+        public static class AmmoInventoryUtils {
             public static AmmoInventory AmmoInventory => AmmoInventory.Instance;
             public static int defaultammo = 2000;
-
-            public static Action<AmmoInventory> OnAwake;
-            public static Action<AmmoInventory> OnDestroy;
-
-            public static Action<AmmoInventory, AmmoGroup, int> OnAddCartridge;
-
-            public static Action<AmmoInventory, AmmoGroup, int> OnRemoveCartridge;
-
-            [HarmonyPatch(nameof(AmmoInventory.Awake))]
-            [HarmonyPostfix]
-            public static void Awake(AmmoInventory __instance) {
-                OnAwake.Invoke(__instance);
-            }
-
-            [HarmonyPatch(nameof(AmmoInventory.Destroy))]
-            [HarmonyPostfix]
-            public static void Destroy(AmmoInventory __instance) {
-                OnDestroy.Invoke(__instance);
-            }
-            [HarmonyPatch(nameof(AmmoInventory.AddCartridge))]
-            [HarmonyPostfix]
-            public static void AddCartridge(AmmoInventory __instance, AmmoGroup ammoGroup, int count) {
-                OnAddCartridge.Invoke(__instance, ammoGroup, count);
-            }
-            [HarmonyPatch(nameof(AmmoInventory.RemoveCartridge))]
-            [HarmonyPostfix]
-            public static void RemoveCartridge(AmmoInventory __instance, AmmoGroup ammoGroup, int count) {
-                OnRemoveCartridge.Invoke(__instance, ammoGroup, count);
-            }
+            public static Action OnAmmoUpdate;
 
             public static void AddAmmoToInventory() {
                 AmmoInventory.ClearAmmo();
@@ -243,6 +184,46 @@ namespace AmmoLab
             public static void RemoveCartridgeToInventory(AmmoGroup ammoGroup, int ammo) {
                 foreach (var cartridge in ammoGroup.cartridges) {
                     AmmoInventory.RemoveCartridge(cartridge, ammo);
+                }
+            }
+        }
+
+        internal static class Patches {
+            [HarmonyPatch(typeof(AmmoInventory))]
+            internal static class AmmoInventoryPatches {
+                [HarmonyPatch(nameof(AmmoInventory.RemoveCartridge))]
+                [HarmonyPostfix]
+                static void RemoveCartridge(CartridgeData cartridge, int count) {
+                    AmmoInventoryUtils.OnAmmoUpdate.Invoke();
+                }
+            }
+
+            [HarmonyPatch(typeof(Magazine))]
+            internal static class MagazinePatches {
+                [HarmonyPatch(nameof(Magazine.OnPoolInitialize))]
+                [HarmonyPrefix]
+                static void _Spawn(Magazine __instance) {
+                    MagazineUtils.magazines.Add(__instance);
+                    MagazineUtils.OnSpawn.Invoke(__instance);
+                }
+
+                [HarmonyPatch(nameof(Magazine.OnPoolDeInitialize))]
+                [HarmonyPrefix]
+                static void _Despawn(Magazine __instance) {
+                    MagazineUtils.magazines.Remove(__instance);
+                    MagazineUtils.OnDespawn.Invoke(__instance);
+                }
+
+                [HarmonyPatch(nameof(Magazine.OnInsert))]
+                [HarmonyPostfix]
+                static void _OnInsert(Magazine __instance) {
+                    MagazineUtils.OnInsert.Invoke(__instance);
+                }
+
+                [HarmonyPatch(nameof(Magazine.OnEject))]
+                [HarmonyPostfix]
+                static void _OnEject(Magazine __instance) {
+                    MagazineUtils.OnEject.Invoke(__instance);
                 }
             }
         }
