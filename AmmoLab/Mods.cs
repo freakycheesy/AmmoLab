@@ -119,13 +119,9 @@ namespace AmmoLab.Mods {
         }
         public AmmoGroupEnum ammoEnum = AmmoGroupEnum.light;
         public static Page page;
-        public GamblingLabMod() {
-            MelonLogger.Msg("Initialized Gambling Lab");
-            MakeMenu();
-        }
 
         private static FunctionElement gambleinfo;
-        private void MakeMenu() {
+        public GamblingLabMod() {
             ChangeAmmoGroup(ammoEnum);
             page = Page.Root.CreatePage("Gambling Lab", Core.red);
             page.Name = "Gambling <color=white>Lab";
@@ -164,6 +160,7 @@ namespace AmmoLab.Mods {
             gambleinfo.ElementName += context;
         }
         public static void ChangeAmmoGroup(Enum i) {
+            i ??= AmmoGroupEnum.light;
             switch (i) {
                 case AmmoGroupEnum.light:
                     ammoGroup = AmmoInventory.Instance.lightAmmoGroup;

@@ -1,13 +1,12 @@
 ﻿using AmmoLab.Mods;
 using AmmoLab.Utils;
-using BoneLib.BoneMenu;
 using HarmonyLib;
 using Il2CppSLZ.Marrow;
 using Il2CppSLZ.Marrow.Data;
 using MelonLoader;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(AmmoLab.Core), "AmmoLab", "6.6.6", "freakycheesy", "https://github.com/freakycheesy/AmmoLab/")]
+[assembly: MelonInfo(typeof(AmmoLab.Core), "AmmoLab", "6.7.0", "freakycheesy", "https://github.com/freakycheesy/AmmoLab/")]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
 namespace AmmoLab {
     public class Core : MelonMod {
@@ -25,6 +24,7 @@ namespace AmmoLab {
 
             HarmonyInstance.PatchAll(typeof(Utils.Patches));
             mod = new();
+            gamblingMod = new();
         }
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName) {
@@ -89,7 +89,7 @@ namespace AmmoLab {
                 [HarmonyPatch(nameof(AmmoInventory.RemoveCartridge))]
                 [HarmonyPostfix]
                 static void RemoveCartridge(CartridgeData cartridge, int count) {
-                    AmmoInventoryUtils.OnAmmoUpdate?.Invoke();
+                    AmmoInventoryUtils.OnAmmoUpdate?.DynamicInvoke();
                 }
             }
 
@@ -98,27 +98,27 @@ namespace AmmoLab {
                 [HarmonyPatch(nameof(Magazine.OnPoolInitialize))]
                 [HarmonyPrefix]
                 static void _Spawn(Magazine __instance) {
+                    MagazineUtils.OnSpawn?.DynamicInvoke(__instance);
                     MagazineUtils.magazines.Add(__instance);
-                    MagazineUtils.OnSpawn?.Invoke(__instance);
                 }
 
                 [HarmonyPatch(nameof(Magazine.OnPoolDeInitialize))]
                 [HarmonyPrefix]
                 static void _Despawn(Magazine __instance) {
+                    MagazineUtils.OnDespawn?.DynamicInvoke(__instance);
                     MagazineUtils.magazines.Remove(__instance);
-                    MagazineUtils.OnDespawn?.Invoke(__instance);
                 }
 
                 [HarmonyPatch(nameof(Magazine.OnInsert))]
-                [HarmonyPostfix]
+                [HarmonyPrefix]
                 static void _OnInsert(Magazine __instance) {
-                    MagazineUtils.OnInsert?.Invoke(__instance);
+                    MagazineUtils.OnInsert?.DynamicInvoke(__instance);
                 }
 
                 [HarmonyPatch(nameof(Magazine.OnEject))]
-                [HarmonyPostfix]
+                [HarmonyPrefix]
                 static void _OnEject(Magazine __instance) {
-                    MagazineUtils.OnEject?.Invoke(__instance);
+                    MagazineUtils.OnEject?.DynamicInvoke(__instance);
                 }
             }
         }
