@@ -536,6 +536,7 @@
 
 	<ItemGroup>
 		<Compile Include="Core.cs" />
+		<Compile Include="Mods.cs" />
 	</ItemGroup>
 	
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
