@@ -22,7 +22,8 @@ namespace AmmoLab {
 
         public override void OnInitializeMelon() {
             LoggerInstance.Msg("Initialized.");
-
+            MagazineUtils.DummyNise();
+            AmmoInventoryUtils.DummyNise();
             HarmonyInstance.PatchAll();
             mod = new(this);
         }
@@ -42,7 +43,18 @@ namespace AmmoLab {
             public static Action<Magazine> OnInsert;
             public static Action<Magazine> OnEject;
 
+            public static void DummyNise() {
+                OnSpawn += DummyAction;
+                OnDespawn += DummyAction;
+                OnInsert += DummyAction;
+                OnEject += DummyAction;
+            }
+
+            public static void DummyAction(Magazine mag) {
+            }
+
             public static void TryAction(Magazine mag, Action<Magazine> action) {
+                
                 if (action == null)
                     return;
                 if (mag == null) {
@@ -55,7 +67,7 @@ namespace AmmoLab {
                 else if (action == OnDespawn) {
                     magazines.Remove(mag);
                 }
-                if(magazines.Contains(mag)) action.Invoke(mag);   
+                if(magazines.Contains(mag)) action?.Invoke(mag);   
             }
 
             public static void RefillAllMagazines() {
@@ -73,6 +85,12 @@ namespace AmmoLab {
             public static AmmoInventory AmmoInventory => AmmoInventory.Instance;
             public static int defaultammo = 2000;
             public static Action<CartridgeData, int> OnAmmoUpdate;
+            public static void DummyNise() {
+                OnAmmoUpdate += (_,_) => DummyAction();
+            }
+
+            private static void DummyAction() {
+            }
 
             public static void TryAction(AmmoInventory ammoInventory, Action<AmmoInventory> action) {
                 if (action == null)
@@ -81,7 +99,7 @@ namespace AmmoLab {
                     MelonLogger.Error($"AmmoInventory is {ammoInventory != null} + Action is {action != null}, cannot perform action.");
                     return;
                 }
-                action.Invoke(ammoInventory);
+                action?.Invoke(ammoInventory);
             }
 
             public static void AddAmmoToInventory() {
