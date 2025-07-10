@@ -17,14 +17,14 @@ namespace AmmoLab {
             }
         }
         public static DefaultMod mod;
+        public static GamblingLabMod gamblingMod;
         public static MelonPreferences_Category PrefsCategory;
 
         public override void OnInitializeMelon() {
             LoggerInstance.Msg("Initialized.");
 
-            HarmonyInstance.PatchAll(typeof(Utils.Patches));
-            mod = new();
-            gamblingMod = new();
+            HarmonyInstance.PatchAll();
+            mod = new(this);
         }
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName) {
@@ -42,6 +42,22 @@ namespace AmmoLab {
             public static Action<Magazine> OnInsert;
             public static Action<Magazine> OnEject;
 
+            public static void TryAction(Magazine mag, Action<Magazine> action) {
+                if (action == null)
+                    return;
+                if (mag == null) {
+                    MelonLogger.Error($"Magazine is {mag != null} + Action is {action != null}, cannot perform action.");
+                    return;
+                }
+                if (action == OnSpawn) {
+                    magazines.Add(mag);
+                }
+                else if (action == OnDespawn) {
+                    magazines.Remove(mag);
+                }
+                if(magazines.Contains(mag)) action.Invoke(mag);   
+            }
+
             public static void RefillAllMagazines() {
                 foreach (var mag in magazines) {
                     mag.magazineState.Refill();
@@ -56,7 +72,17 @@ namespace AmmoLab {
         public static class AmmoInventoryUtils {
             public static AmmoInventory AmmoInventory => AmmoInventory.Instance;
             public static int defaultammo = 2000;
-            public static Action OnAmmoUpdate;
+            public static Action<CartridgeData, int> OnAmmoUpdate;
+
+            public static void TryAction(AmmoInventory ammoInventory, Action<AmmoInventory> action) {
+                if (action == null)
+                    return;
+                if (ammoInventory == null) {
+                    MelonLogger.Error($"AmmoInventory is {ammoInventory != null} + Action is {action != null}, cannot perform action.");
+                    return;
+                }
+                action.Invoke(ammoInventory);
+            }
 
             public static void AddAmmoToInventory() {
                 AmmoInventory.ClearAmmo();
@@ -89,7 +115,8 @@ namespace AmmoLab {
                 [HarmonyPatch(nameof(AmmoInventory.RemoveCartridge))]
                 [HarmonyPostfix]
                 static void RemoveCartridge(CartridgeData cartridge, int count) {
-                    AmmoInventoryUtils.OnAmmoUpdate?.DynamicInvoke();
+                    if (cartridge)
+                        AmmoInventoryUtils.OnAmmoUpdate?.Invoke(cartridge, count);
                 }
             }
 
@@ -98,27 +125,33 @@ namespace AmmoLab {
                 [HarmonyPatch(nameof(Magazine.OnPoolInitialize))]
                 [HarmonyPrefix]
                 static void _Spawn(Magazine __instance) {
-                    MagazineUtils.OnSpawn?.DynamicInvoke(__instance);
-                    MagazineUtils.magazines.Add(__instance);
+                    if (MagazineUtils.OnSpawn == null)
+                        return;
+                    MagazineUtils.TryAction(__instance, MagazineUtils.OnSpawn);
                 }
 
                 [HarmonyPatch(nameof(Magazine.OnPoolDeInitialize))]
                 [HarmonyPrefix]
                 static void _Despawn(Magazine __instance) {
-                    MagazineUtils.OnDespawn?.DynamicInvoke(__instance);
-                    MagazineUtils.magazines.Remove(__instance);
+                    if (MagazineUtils.OnDespawn == null)
+                        return;
+                    MagazineUtils.TryAction(__instance, MagazineUtils.OnDespawn);
                 }
 
                 [HarmonyPatch(nameof(Magazine.OnInsert))]
                 [HarmonyPrefix]
                 static void _OnInsert(Magazine __instance) {
-                    MagazineUtils.OnInsert?.DynamicInvoke(__instance);
+                    if (MagazineUtils.OnInsert == null)
+                        return;
+                    MagazineUtils.TryAction(__instance, MagazineUtils.OnInsert);
                 }
 
                 [HarmonyPatch(nameof(Magazine.OnEject))]
                 [HarmonyPrefix]
                 static void _OnEject(Magazine __instance) {
-                    MagazineUtils.OnEject?.DynamicInvoke(__instance);
+                    if (MagazineUtils.OnEject == null)
+                        return;
+                    MagazineUtils.TryAction(__instance, MagazineUtils.OnEject);
                 }
             }
         }

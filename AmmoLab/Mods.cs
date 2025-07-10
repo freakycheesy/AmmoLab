@@ -1,12 +1,21 @@
 ﻿using AmmoLab.Utils;
 using BoneLib.BoneMenu;
 using Il2CppSLZ.Marrow;
+using Il2CppSLZ.Marrow.Data;
 using MelonLoader;
 using UnityEngine;
+using UnityEngine.Events;
 using Random = UnityEngine.Random;
 
 namespace AmmoLab.Mods {
-    public class DefaultMod {
+    public class Mod {
+        MelonMod melon;
+
+        public Mod(MelonMod melon) {
+            this.melon = melon;
+        }
+    }
+    public class DefaultMod : Mod {
         // Pages
         public static Page mainPage;
 
@@ -21,7 +30,11 @@ namespace AmmoLab.Mods {
         // Colors
         private static MelonPreferences_Entry<Color> gold;
 
-        public void AmmoInventoryUpdate() {
+        public DefaultMod(MelonMod melon) : base(melon) {
+            OnStart();
+        }
+
+        public static void AmmoInventoryUpdate() {
             if (!ActivateMod.Value)
                 return;
             if (AutoMagazineRefill.Value)
@@ -30,7 +43,7 @@ namespace AmmoLab.Mods {
                 AmmoInventoryUtils.AddAmmoToInventory(StaticAmmo.Value);
         }
 
-        public DefaultMod() {
+        private void OnStart() {
             MelonLogger.Msg("Initialized Ammo Lab BoneMenu");
 
             Core.PrefsCategory = MelonPreferences.CreateCategory("AmmoLab");
@@ -39,11 +52,10 @@ namespace AmmoLab.Mods {
             InitSettings();
             CreateBonemenu();
 
-            AmmoInventoryUtils.OnAmmoUpdate += AmmoInventoryUpdate;
+            AmmoInventoryUtils.OnAmmoUpdate += (_, _) => AmmoInventoryUpdate();
             MagazineUtils.OnEject += RefillMagazine;
             MagazineUtils.OnSpawn += MakeMagsGold;
         }
-
 
         private static void InitSettings() {
             ActivateMod = Core.PrefsCategory.CreateEntry<bool>(nameof(ActivateMod), true);
@@ -58,7 +70,7 @@ namespace AmmoLab.Mods {
             gold = Core.PrefsCategory.CreateEntry<Color>(nameof(gold), new(218, 165, 32));
         }
 
-        private void RefillMagazine(Magazine magazine) {
+        private static void RefillMagazine(Magazine magazine) {
             if (!ActivateMod.Value)
                 return;
             if (!EmptyRefill.Value)
@@ -109,7 +121,7 @@ namespace AmmoLab.Mods {
         }
     }
 
-    public class GamblingLabMod {
+    public class GamblingLabMod : Mod {
         public static int gambleAmount = 0;
         public static AmmoGroup ammoGroup;
         public enum AmmoGroupEnum : int {
@@ -121,7 +133,7 @@ namespace AmmoLab.Mods {
         public static Page page;
 
         private static FunctionElement gambleinfo;
-        public GamblingLabMod() {
+        public GamblingLabMod(MelonMod melon) : base(melon) {
             ChangeAmmoGroup(ammoEnum);
             page = Page.Root.CreatePage("Gambling Lab", Core.red);
             page.Name = "Gambling <color=white>Lab";
