@@ -1,10 +1,8 @@
 ﻿using AmmoLab.Utils;
 using BoneLib.BoneMenu;
 using Il2CppSLZ.Marrow;
-using Il2CppSLZ.Marrow.Data;
 using MelonLoader;
 using UnityEngine;
-using UnityEngine.Events;
 using Random = UnityEngine.Random;
 
 namespace AmmoLab.Mods {
@@ -52,7 +50,7 @@ namespace AmmoLab.Mods {
             InitSettings();
             CreateBonemenu();
 
-            AmmoInventoryUtils.OnAmmoUpdate += (_, _) => AmmoInventoryUpdate();
+            AmmoInventory.Instance.onAmmoUpdate += () => AmmoInventoryUpdate();
             MagazineUtils.OnEject += RefillMagazine;
             MagazineUtils.OnSpawn += MakeMagsGold;
         }
@@ -83,17 +81,13 @@ namespace AmmoLab.Mods {
                 return;
             if (!MakeMagazinesGold.Value)
                 return;
-            List<Renderer> renderers = __instance.GetComponentsInParent<Renderer>().ToList();
-            renderers.AddRange(__instance.GetComponentsInChildren<Renderer>());
-            foreach (Renderer renderer in renderers) {
-                var material = new Material(renderer.material.shader);
-                material.color = gold.Value;
-                material.SetFloat("_Metallic", 1);
-                material.SetFloat("_Smoothness", 1);
-                for (int i = 0; i < renderer.materials.Length; i++) {
-                    var matList = renderer.materials.ToArray();
-                    matList.SetValue(material, i);
-                    renderer.materials = matList;
+            var renderers = __instance.GetComponentsInParent<Renderer>();
+            foreach (Renderer renderer in renderers) {           
+                foreach (var material in renderer.materials) {
+                    material.mainTexture = null;
+                    material.color = gold.Value;
+                    material.SetFloat("_Metallic", 1);
+                    material.SetFloat("_Smoothness", 1);
                 }
             }
         }

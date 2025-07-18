@@ -531,12 +531,13 @@
 	<PropertyGroup>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-		<BaseOutputPath>$(BONELAB_DIR)\Mods</BaseOutputPath>
+		<BaseOutputPath></BaseOutputPath>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<Compile Include="Core.cs" />
 		<Compile Include="Mods.cs" />
+		<Compile Include="Utils.cs" />
 	</ItemGroup>
 	
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
