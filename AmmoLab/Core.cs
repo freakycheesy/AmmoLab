@@ -19,8 +19,8 @@ namespace AmmoLab {
 
         public override void OnInitializeMelon() {
             LoggerInstance.Msg("Initialized.");
-            HarmonyInstance.PatchAll();
-            mod = new(this);
+            mod = new();
+            gamblingMod = new();
         }
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName) {

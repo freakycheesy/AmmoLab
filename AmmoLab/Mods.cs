@@ -1,16 +1,16 @@
 ﻿using AmmoLab.Utils;
 using BoneLib.BoneMenu;
+using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.Runtime;
 using Il2CppSLZ.Marrow;
+using Il2CppSLZ.Marrow.Data;
 using MelonLoader;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 namespace AmmoLab.Mods {
     public class Mod {
-        MelonMod melon;
-
-        public Mod(MelonMod melon) {
-            this.melon = melon;
+        public Mod() {
         }
     }
     public class DefaultMod : Mod {
@@ -27,12 +27,13 @@ namespace AmmoLab.Mods {
 
         // Colors
         private static MelonPreferences_Entry<Color> gold;
+        private static Color defaultGold = new(1f, 1f, 0);
 
-        public DefaultMod(MelonMod melon) : base(melon) {
+        public DefaultMod() {
             OnStart();
         }
 
-        public static void AmmoInventoryUpdate() {
+        public static void AmmoInventoryUpdate(CartridgeData _, int __) {
             if (!ActivateMod.Value)
                 return;
             if (AutoMagazineRefill.Value)
@@ -50,11 +51,10 @@ namespace AmmoLab.Mods {
             InitSettings();
             CreateBonemenu();
 
-            AmmoInventory.Instance.onAmmoUpdate += () => AmmoInventoryUpdate();
             MagazineUtils.OnEject += RefillMagazine;
             MagazineUtils.OnSpawn += MakeMagsGold;
+            AmmoInventoryUtils.OnAmmoChanged += AmmoInventoryUpdate;
         }
-
         private static void InitSettings() {
             ActivateMod = Core.PrefsCategory.CreateEntry<bool>(nameof(ActivateMod), true);
 
@@ -65,7 +65,7 @@ namespace AmmoLab.Mods {
             StaticAmmo = Core.PrefsCategory.CreateEntry<int>(nameof(StaticAmmo), 2000);
 
             MakeMagazinesGold = Core.PrefsCategory.CreateEntry<bool>(nameof(MakeMagazinesGold), false);
-            gold = Core.PrefsCategory.CreateEntry<Color>(nameof(gold), new(218, 165, 32));
+            gold = Core.PrefsCategory.CreateEntry<Color>(nameof(gold), defaultGold);
         }
 
         private static void RefillMagazine(Magazine magazine) {
@@ -81,8 +81,8 @@ namespace AmmoLab.Mods {
                 return;
             if (!MakeMagazinesGold.Value)
                 return;
-            var renderers = __instance.GetComponentsInParent<Renderer>();
-            foreach (Renderer renderer in renderers) {           
+            var renderers = __instance.GetComponentsInChildren<Renderer>();
+            foreach (Renderer renderer in renderers) {                
                 foreach (var material in renderer.materials) {
                     material.mainTexture = null;
                     material.color = gold.Value;
@@ -127,7 +127,7 @@ namespace AmmoLab.Mods {
         public static Page page;
 
         private static FunctionElement gambleinfo;
-        public GamblingLabMod(MelonMod melon) : base(melon) {
+        public GamblingLabMod() {
             ChangeAmmoGroup(ammoEnum);
             page = Page.Root.CreatePage("Gambling Lab", Core.red);
             page.Name = "Gambling <color=white>Lab";

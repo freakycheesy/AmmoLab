@@ -2,32 +2,14 @@
 using Il2CppSLZ.Marrow;
 using Il2CppSLZ.Marrow.Data;
 using MelonLoader;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace AmmoLab.Utils {
     public static class MagazineUtils {
         public static List<Magazine> magazines = new();
         public static Action<Magazine> OnSpawn;
+        public static Action<Magazine> OnDespawn;
         public static Action<Magazine> OnEject;
-
-        public static void TryAction(Magazine mag, Action<Magazine> action) {
-
-            if (action == null)
-                return;
-            if (mag == null) {
-                MelonLogger.Error($"Magazine is {mag != null} + Action is {action != null}, cannot perform action.");
-                return;
-            }
-            if (action == OnSpawn) {
-                magazines.Add(mag);
-            }
-            if (magazines.Contains(mag))
-                action?.Invoke(mag);
-        }
 
         public static void RefillAllMagazines() {
             foreach (var mag in magazines) {
@@ -43,16 +25,7 @@ namespace AmmoLab.Utils {
     public static class AmmoInventoryUtils {
         public static AmmoInventory AmmoInventory => AmmoInventory.Instance;
         public static int defaultammo = 2000;
-
-        public static void TryAction(AmmoInventory ammoInventory, Action<AmmoInventory> action) {
-            if (action == null)
-                return;
-            if (ammoInventory == null) {
-                MelonLogger.Error($"AmmoInventory is {ammoInventory != null} + Action is {action != null}, cannot perform action.");
-                return;
-            }
-            action?.Invoke(ammoInventory);
-        }
+        public static Action<CartridgeData, int> OnAmmoChanged;
 
         public static void AddAmmoToInventory() {
             AmmoInventory.ClearAmmo();
@@ -85,17 +58,35 @@ namespace AmmoLab.Utils {
             [HarmonyPatch(nameof(Magazine.OnPoolInitialize))]
             [HarmonyPrefix]
             static void _Spawn(Magazine __instance) {
-                if (MagazineUtils.OnSpawn == null)
-                    return;
+                MagazineUtils.magazines.Add(__instance);
                 MagazineUtils.OnSpawn?.Invoke(__instance);
+            }
+
+            [HarmonyPatch(nameof(Magazine.OnPoolDeInitialize))]
+            [HarmonyPrefix]
+            static void _Despawn(Magazine __instance) {
+                MagazineUtils.magazines.Remove(__instance);
+                MagazineUtils.OnDespawn?.Invoke(__instance);
             }
 
             [HarmonyPatch(nameof(Magazine.OnEject))]
             [HarmonyPrefix]
             static void _OnEject(Magazine __instance) {
-                if (MagazineUtils.OnEject == null)
-                    return;
                 MagazineUtils.OnEject?.Invoke(__instance);
+            }
+        }
+
+        [HarmonyPatch(typeof(AmmoInventory))]
+        internal static class AmmoInvPatches {
+            [HarmonyPatch(nameof(AmmoInventory.Awake))]
+            [HarmonyPostfix]
+            static void Awake() {
+                AmmoInventoryUtils.OnAmmoChanged?.Invoke(null, 0);
+            }
+            [HarmonyPatch(nameof(AmmoInventory.RemoveCartridge))]
+            [HarmonyPostfix]
+            static void RemoveCartridge(CartridgeData cartridge, int count) {
+                AmmoInventoryUtils.OnAmmoChanged?.Invoke(cartridge, count);
             }
         }
     }
